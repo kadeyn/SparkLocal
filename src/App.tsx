@@ -3,6 +3,7 @@ import {
   Home,
   ParentSignup,
   KidOnboarding,
+  OnboardingResults,
   Feed,
   BusinessDetail,
   ParentDashboard,
@@ -19,6 +20,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/signup/parent" element={<ParentSignup />} />
       <Route path="/onboarding/kid" element={<KidOnboarding />} />
+      <Route path="/onboarding/results" element={<OnboardingResults />} />
       <Route path="/app/feed" element={<Feed />} />
       <Route path="/app/saved" element={<Saved />} />
       <Route path="/app/messages" element={<Messages />} />

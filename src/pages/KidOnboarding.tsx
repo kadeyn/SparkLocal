@@ -451,7 +451,7 @@ function LoadingScreen() {
     }, 1200)
 
     const navigateTimeout = setTimeout(() => {
-      navigate('/app/feed')
+      navigate('/onboarding/results')
     }, 4000)
 
     return () => {
