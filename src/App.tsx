@@ -8,6 +8,9 @@ import {
   ParentDashboard,
   BusinessSignup,
   BusinessDashboard,
+  Saved,
+  Messages,
+  Profile,
 } from './pages'
 
 export default function App() {
@@ -17,6 +20,9 @@ export default function App() {
       <Route path="/signup/parent" element={<ParentSignup />} />
       <Route path="/onboarding/kid" element={<KidOnboarding />} />
       <Route path="/app/feed" element={<Feed />} />
+      <Route path="/app/saved" element={<Saved />} />
+      <Route path="/app/messages" element={<Messages />} />
+      <Route path="/app/profile" element={<Profile />} />
       <Route path="/business/:id" element={<BusinessDetail />} />
       <Route path="/parent/dashboard" element={<ParentDashboard />} />
       <Route path="/signup/business" element={<BusinessSignup />} />
