@@ -11,7 +11,7 @@ import {
   BusinessDashboard,
   Saved,
   Messages,
-  Profile,
+  Path,
 } from './pages'
 
 export default function App() {
@@ -24,7 +24,7 @@ export default function App() {
       <Route path="/app/feed" element={<Feed />} />
       <Route path="/app/saved" element={<Saved />} />
       <Route path="/app/messages" element={<Messages />} />
-      <Route path="/app/profile" element={<Profile />} />
+      <Route path="/app/path" element={<Path />} />
       <Route path="/business/:id" element={<BusinessDetail />} />
       <Route path="/parent/dashboard" element={<ParentDashboard />} />
       <Route path="/signup/business" element={<BusinessSignup />} />

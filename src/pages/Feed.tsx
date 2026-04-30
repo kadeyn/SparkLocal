@@ -11,7 +11,6 @@ import {
   Home,
   Bookmark,
   MessageSquare,
-  User,
   Check,
   ChevronRight,
 } from 'lucide-react'
@@ -34,7 +33,7 @@ import {
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { businessOwners, type BusinessOwner } from '@/data/businessOwners'
-import { aiIdeasForKaden, type AIGeneratedIdea } from '@/data/aiIdeas'
+import { aiIdeasForKadeyn, type AIGeneratedIdea } from '@/data/aiIdeas'
 
 // Unsplash images for business types
 const businessImages: Record<string, string> = {
@@ -554,7 +553,7 @@ function BottomNav() {
     { path: '/app/feed', icon: Home, label: 'Feed' },
     { path: '/app/saved', icon: Bookmark, label: 'Saved' },
     { path: '/app/messages', icon: MessageSquare, label: 'Messages', notification: true },
-    { path: '/app/profile', icon: User, label: 'Profile' },
+    { path: '/app/path', icon: Sparkles, label: 'Path' },
   ]
 
   return (
@@ -595,7 +594,7 @@ function Sidebar() {
     { path: '/app/feed', icon: Home, label: 'Feed' },
     { path: '/app/saved', icon: Bookmark, label: 'Saved' },
     { path: '/app/messages', icon: MessageSquare, label: 'Messages', notification: true },
-    { path: '/app/profile', icon: User, label: 'Profile' },
+    { path: '/app/path', icon: Sparkles, label: 'Path' },
   ]
 
   return (
@@ -643,7 +642,7 @@ function Sidebar() {
           </AvatarFallback>
         </Avatar>
         <div>
-          <p className="font-medium text-sm">Kaden</p>
+          <p className="font-medium text-sm">Kadeyn</p>
           <p className="text-xs text-muted-foreground">$185 earned</p>
         </div>
       </div>
@@ -704,7 +703,7 @@ export default function Feed() {
   for (let i = 0; i < pattern.length; i++) {
     const type = pattern[i]
     if (type === 'ai') {
-      feedItems.push({ type: 'ai', data: aiIdeasForKaden[aiIndex % aiIdeasForKaden.length] })
+      feedItems.push({ type: 'ai', data: aiIdeasForKadeyn[aiIndex % aiIdeasForKadeyn.length] })
       aiIndex++
     } else if (type === 'video') {
       feedItems.push({ type: 'video', data: businessOwners[businessIndex % businessOwners.length] })

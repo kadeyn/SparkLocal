@@ -12,8 +12,8 @@ export interface AIGeneratedIdea {
   category: 'creative' | 'tech' | 'service' | 'physical'
 }
 
-// AI-generated opportunity ideas personalized for Kaden
-export const aiIdeasForKaden: AIGeneratedIdea[] = [
+// AI-generated opportunity ideas personalized for Kadeyn
+export const aiIdeasForKadeyn: AIGeneratedIdea[] = [
   {
     id: 'ai-idea-1',
     title: 'Local Business Video Ads',
@@ -82,11 +82,11 @@ export const aiIdeasForKaden: AIGeneratedIdea[] = [
 ]
 
 export const getAIIdeaById = (id: string): AIGeneratedIdea | undefined => {
-  return aiIdeasForKaden.find(idea => idea.id === id)
+  return aiIdeasForKadeyn.find(idea => idea.id === id)
 }
 
 export const getTopAIIdeas = (count: number = 3): AIGeneratedIdea[] => {
-  return [...aiIdeasForKaden]
+  return [...aiIdeasForKadeyn]
     .sort((a, b) => b.matchScore - a.matchScore)
     .slice(0, count)
 }

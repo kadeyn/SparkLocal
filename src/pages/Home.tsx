@@ -170,7 +170,7 @@ export default function Home() {
                           </div>
                           <span className="font-bold">SparkLocal</span>
                         </div>
-                        <p className="text-sm text-muted-foreground">Good morning, Kaden!</p>
+                        <p className="text-sm text-muted-foreground">Good morning, Kadeyn!</p>
                         <p className="text-2xl font-bold">Find your next gig</p>
                       </div>
 

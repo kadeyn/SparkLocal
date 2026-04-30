@@ -1,193 +1,111 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react'
 import { useSurveyStore } from '@/lib/surveyState'
 import { businessOwners } from '@/data/businessOwners'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 
-// Interest categories mapped to colors
-const interestCategories = {
-  trades: { label: 'Trades', color: '#F97362' },
-  creative: { label: 'Creative', color: '#7B61FF' },
-  service: { label: 'Service', color: '#22C8A9' },
-}
-
-// Map survey answers to interest categories
-function mapAnswersToGalaxy(answers: {
-  favoriteSubjects: string | null
-  hobbies: string[]
-  workStyle: string | null
-}) {
-  const galaxies: { label: string; color: string }[] = []
-
-  // Map favorite subjects
-  if (answers.favoriteSubjects) {
-    if (
-      answers.favoriteSubjects.includes('Math') ||
-      answers.favoriteSubjects.includes('Science')
-    ) {
-      galaxies.push(interestCategories.trades)
-    }
-    if (
-      answers.favoriteSubjects.includes('Art') ||
-      answers.favoriteSubjects.includes('Writing')
-    ) {
-      galaxies.push(interestCategories.creative)
-    }
-  }
-
-  // Map work style
-  if (answers.workStyle) {
-    if (answers.workStyle.includes('hands')) {
-      if (!galaxies.find((g) => g.label === 'Trades')) {
-        galaxies.push(interestCategories.trades)
-      }
-    }
-    if (answers.workStyle.includes('people')) {
-      galaxies.push(interestCategories.service)
-    }
-    if (answers.workStyle.includes('tech') || answers.workStyle.includes('screens')) {
-      if (!galaxies.find((g) => g.label === 'Creative')) {
-        galaxies.push(interestCategories.creative)
-      }
-    }
-  }
-
-  // Map hobbies
-  const creativeHobbies = ['Making videos', 'Drawing or design', 'Music']
-  const tradesHobbies = ['Working on cars', 'Building stuff with my hands', 'Cooking or baking']
-  const serviceHobbies = ['Hanging with friends', 'Sports']
-
-  if (answers.hobbies.some((h) => creativeHobbies.includes(h))) {
-    if (!galaxies.find((g) => g.label === 'Creative')) {
-      galaxies.push(interestCategories.creative)
-    }
-  }
-  if (answers.hobbies.some((h) => tradesHobbies.includes(h))) {
-    if (!galaxies.find((g) => g.label === 'Trades')) {
-      galaxies.push(interestCategories.trades)
-    }
-  }
-  if (answers.hobbies.some((h) => serviceHobbies.includes(h))) {
-    if (!galaxies.find((g) => g.label === 'Service')) {
-      galaxies.push(interestCategories.service)
-    }
-  }
-
-  // Ensure we always have 3 galaxies
-  const allCategories = [
-    interestCategories.creative,
-    interestCategories.trades,
-    interestCategories.service,
+// Mini Skill Tree Preview SVG (Start node + 3 Tier 1 nodes)
+function SkillTreePreview() {
+  // Node positions
+  const startPos = { x: 100, y: 130 }
+  const tier1Positions = [
+    { x: 40, y: 50, label: 'First\nConnection', status: 'earned' },
+    { x: 100, y: 50, label: 'First\nHustle', status: 'unlocked' },
+    { x: 160, y: 50, label: 'First\nPitch', status: 'unlocked' },
   ]
-  for (const cat of allCategories) {
-    if (galaxies.length >= 3) break
-    if (!galaxies.find((g) => g.label === cat.label)) {
-      galaxies.push(cat)
-    }
+
+  const colors = {
+    earned: '#4F46E5',
+    unlocked: '#FB7185',
   }
-
-  return galaxies.slice(0, 3)
-}
-
-// Interest Galaxy SVG component
-function InterestGalaxy({
-  galaxies,
-}: {
-  galaxies: { label: string; color: string }[]
-}) {
-  const centerX = 120
-  const centerY = 100
-  const radius = 60
-  const nodeRadius = 28
-  const centerNodeRadius = 22
-
-  // Calculate positions for 3 nodes around center
-  const positions = galaxies.map((_, i) => {
-    const angle = (i * 120 - 90) * (Math.PI / 180)
-    return {
-      x: centerX + radius * Math.cos(angle),
-      y: centerY + radius * Math.sin(angle),
-    }
-  })
 
   return (
     <svg
-      width="240"
-      height="200"
-      viewBox="0 0 240 200"
+      width="200"
+      height="160"
+      viewBox="0 0 200 160"
       className="mx-auto"
       role="img"
-      aria-label="Your interest constellation showing three connected interest areas"
+      aria-label="Preview of your skill tree showing start node and three tier 1 skills"
     >
       {/* Connection lines */}
-      {positions.map((pos, i) => (
+      {tier1Positions.map((pos, i) => (
         <motion.line
           key={`line-${i}`}
-          x1={centerX}
-          y1={centerY}
+          x1={startPos.x}
+          y1={startPos.y}
           x2={pos.x}
           y2={pos.y}
-          stroke="rgba(255,255,255,0.3)"
+          stroke={pos.status === 'earned' ? colors.earned : 'rgba(255,255,255,0.3)'}
           strokeWidth="2"
-          strokeDasharray="4 4"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ delay: 0.5 + i * 0.15, duration: 0.4 }}
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ delay: 0.3 + i * 0.1, duration: 0.4 }}
         />
       ))}
 
-      {/* Center "You" node */}
-      <motion.circle
-        cx={centerX}
-        cy={centerY}
-        r={centerNodeRadius}
-        fill="white"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.3, duration: 0.4, type: 'spring' }}
-      />
+      {/* Start node (earned) */}
+      <motion.g
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.2, type: 'spring' }}
+      >
+        <circle cx={startPos.x} cy={startPos.y} r="18" fill={colors.earned} />
+        <CheckCircle2
+          x={startPos.x - 7}
+          y={startPos.y - 7}
+          width="14"
+          height="14"
+          className="text-white"
+        />
+      </motion.g>
       <motion.text
-        x={centerX}
-        y={centerY + 1}
+        x={startPos.x}
+        y={startPos.y + 30}
         textAnchor="middle"
-        dominantBaseline="middle"
-        fill="#4F46E5"
-        fontSize="11"
-        fontWeight="600"
+        fill="white"
+        fontSize="9"
+        fontWeight="500"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: 0.4 }}
       >
-        You
+        Spark
       </motion.text>
 
-      {/* Interest nodes */}
-      {galaxies.map((galaxy, i) => (
+      {/* Tier 1 nodes */}
+      {tier1Positions.map((pos, i) => (
         <motion.g
-          key={galaxy.label}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.6 + i * 0.15, duration: 0.4, type: 'spring' }}
+          key={`node-${i}`}
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.4 + i * 0.1, type: 'spring' }}
         >
           <circle
-            cx={positions[i].x}
-            cy={positions[i].y}
-            r={nodeRadius}
-            fill={galaxy.color}
+            cx={pos.x}
+            cy={pos.y}
+            r="16"
+            fill={colors[pos.status as 'earned' | 'unlocked']}
           />
-          <text
-            x={positions[i].x}
-            y={positions[i].y + 1}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="white"
-            fontSize="10"
-            fontWeight="600"
-          >
-            {galaxy.label}
-          </text>
+          {pos.status === 'earned' ? (
+            <CheckCircle2
+              x={pos.x - 6}
+              y={pos.y - 6}
+              width="12"
+              height="12"
+              className="text-white"
+            />
+          ) : (
+            <Sparkles
+              x={pos.x - 6}
+              y={pos.y - 6}
+              width="12"
+              height="12"
+              className="text-white"
+            />
+          )}
         </motion.g>
       ))}
     </svg>
@@ -282,17 +200,10 @@ function FloatingShapes() {
 
 export default function OnboardingResults() {
   const navigate = useNavigate()
-  const { answers, reset } = useSurveyStore()
+  const { reset } = useSurveyStore()
 
   // Get top 3 business owners
   const topMatches = businessOwners.slice(0, 3)
-
-  // Map survey answers to interest galaxies
-  const galaxies = mapAnswersToGalaxy({
-    favoriteSubjects: answers.favoriteSubjects,
-    hobbies: answers.hobbies,
-    workStyle: answers.workStyle,
-  })
 
   const handleRetake = () => {
     reset()
@@ -372,7 +283,7 @@ export default function OnboardingResults() {
             </div>
           </motion.div>
 
-          {/* Interest galaxy */}
+          {/* Skill tree preview */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -383,14 +294,33 @@ export default function OnboardingResults() {
               className="text-white text-lg font-semibold"
               style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
             >
-              Three universes match what you said.
+              Your starting tree
             </h2>
-            <InterestGalaxy galaxies={galaxies} />
+            <SkillTreePreview />
             <button
               className="inline-flex items-center gap-1 text-white/60 hover:text-white/90 text-sm font-medium transition-colors"
-              onClick={() => {}}
+              onClick={() => navigate('/app/path?view=tree')}
             >
-              Explore your full constellation
+              See your full path
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </motion.div>
+
+          {/* Secondary teaser */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.4 }}
+            className="text-center p-4 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20"
+          >
+            <p className="text-white/80 text-sm mb-2">
+              Plus: 3 career galaxies and 3 projected futures
+            </p>
+            <button
+              className="inline-flex items-center gap-1 text-rose-300 hover:text-rose-200 text-sm font-medium transition-colors"
+              onClick={() => navigate('/app/path?view=constellation')}
+            >
+              Explore
               <ArrowRight className="w-4 h-4" />
             </button>
           </motion.div>

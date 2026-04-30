@@ -47,10 +47,10 @@ export interface CompletedJob {
   review: string
 }
 
-// Kaden's profile
-export const kadenProfile: KidProfile = {
+// Kadeyn's profile
+export const kadeynProfile: KidProfile = {
   id: 'kaden-1',
-  firstName: 'Kaden',
+  firstName: 'Kadeyn',
   lastName: 'S.',
   age: 14,
   grade: 9,
@@ -93,7 +93,7 @@ export const kadenProfile: KidProfile = {
       completedAt: '2024-01-10',
       earned: 35,
       rating: 5,
-      review: 'Kaden did an amazing job! The templates look professional and he was easy to work with.',
+      review: 'Kadeyn did an amazing job! The templates look professional and he was easy to work with.',
     },
     {
       id: 'job-2',
@@ -120,12 +120,12 @@ export const kadenProfile: KidProfile = {
   parentId: 'parent-1',
 }
 
-export const getKadenProfile = (): KidProfile => kadenProfile
+export const getKadeynProfile = (): KidProfile => kadeynProfile
 
-export const getCompletedJobsCount = (): number => kadenProfile.completedJobs.length
+export const getCompletedJobsCount = (): number => kadeynProfile.completedJobs.length
 
 export const getAverageRating = (): number => {
-  const jobs = kadenProfile.completedJobs
+  const jobs = kadeynProfile.completedJobs
   if (jobs.length === 0) return 0
   const total = jobs.reduce((sum, job) => sum + job.rating, 0)
   return Math.round((total / jobs.length) * 10) / 10
