@@ -42,3 +42,47 @@ export const trackFuturePathSelected = (pathId: string) => {
 export const trackMilestoneClicked = (milestoneId: string) => {
   track('milestone_clicked', { milestone_id: milestoneId })
 }
+
+// Operator portal event helpers
+export const trackOperatorGroupSwitched = (group: string) => {
+  track('operator_group_switched', { group })
+}
+
+export const trackOperatorRoadmapVectorSwitched = (vector: string) => {
+  track('operator_roadmap_vector_switched', { vector })
+}
+
+export const trackOperatorInitiativeOpened = (
+  initiativeId: string,
+  stage: string,
+  health: string
+) => {
+  track('operator_initiative_opened', { initiativeId, stage, health })
+}
+
+export const trackOperatorInitiativeVerdictGenerated = (
+  initiativeId: string,
+  verdict: string
+) => {
+  track('operator_initiative_verdict_generated', { initiativeId, verdict })
+}
+
+export const trackOperatorCashFlowScenarioSwitched = (scenario: string) => {
+  track('operator_cashflow_scenario_switched', { scenario })
+}
+
+export const trackOperatorStatementsViewSwitched = (stmt: string) => {
+  track('operator_statements_view_switched', { stmt })
+}
+
+export const trackOperatorLBOTargetSelected = (targetId: string) => {
+  track('operator_lbo_target_selected', { targetId })
+}
+
+export const trackOperatorLBODebtChanged = (debtPct: number) => {
+  track('operator_lbo_debt_changed', { debtPct })
+}
+
+export const trackOperatorAISynthesisRegenerated = (module: string) => {
+  track('operator_ai_synthesis_regenerated', { module })
+}

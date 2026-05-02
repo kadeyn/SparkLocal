@@ -1,25 +1,69 @@
 import { useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Brain, Megaphone, LogOut, Zap, Radio } from 'lucide-react'
+import { motion } from 'framer-motion'
+import {
+  Activity,
+  Calculator,
+  Rocket,
+  BookOpen,
+  Megaphone,
+  Map,
+  LineChart,
+  FileText,
+  LogOut,
+  Zap,
+  Radio,
+} from 'lucide-react'
 import { track } from '@/lib/track'
 import { cn } from '@/lib/utils'
+
+// Existing views
 import DashboardView from './DashboardView'
 import KnowledgeView from './KnowledgeView'
 import PitchView from './PitchView'
 
-type TabType = 'dashboard' | 'knowledge' | 'pitch'
+// New views
+import { InitiativesView } from './operate'
+import { RoadmapView, CashFlowView, StatementsView, LBOView } from './finance'
 
-const TABS: { id: TabType; label: string; icon: React.ReactNode }[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-  { id: 'knowledge', label: 'Strategy AI', icon: <Brain className="w-4 h-4" /> },
-  { id: 'pitch', label: 'Pitch Generator', icon: <Megaphone className="w-4 h-4" /> },
+type GroupType = 'operate' | 'finance'
+type OperateTab = 'dashboard' | 'initiatives' | 'knowledge' | 'pitch'
+type FinanceTab = 'roadmap' | 'cashflow' | 'statements' | 'lbo'
+type TabType = OperateTab | FinanceTab
+
+interface TabConfig {
+  id: TabType
+  label: string
+  icon: React.ReactNode
+}
+
+const OPERATE_TABS: TabConfig[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: <Activity className="w-4 h-4" /> },
+  { id: 'initiatives', label: 'Initiatives', icon: <Rocket className="w-4 h-4" /> },
+  { id: 'knowledge', label: 'Strategy AI', icon: <BookOpen className="w-4 h-4" /> },
+  { id: 'pitch', label: 'Pitch', icon: <Megaphone className="w-4 h-4" /> },
 ]
+
+const FINANCE_TABS: TabConfig[] = [
+  { id: 'roadmap', label: 'Roadmap', icon: <Map className="w-4 h-4" /> },
+  { id: 'cashflow', label: 'Cash Flow', icon: <LineChart className="w-4 h-4" /> },
+  { id: 'statements', label: 'Statements', icon: <FileText className="w-4 h-4" /> },
+  { id: 'lbo', label: 'LBO/M&A', icon: <Calculator className="w-4 h-4" /> },
+]
+
+const DEFAULT_TABS: Record<GroupType, TabType> = {
+  operate: 'dashboard',
+  finance: 'roadmap',
+}
 
 export default function OperatorLayout() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const currentTab = (searchParams.get('tab') as TabType) || 'dashboard'
+  const currentGroup = (searchParams.get('group') as GroupType) || 'operate'
+  const currentTab = (searchParams.get('tab') as TabType) || DEFAULT_TABS[currentGroup]
+
+  const currentTabs = currentGroup === 'operate' ? OPERATE_TABS : FINANCE_TABS
 
   // Load operator fonts
   useEffect(() => {
@@ -62,8 +106,15 @@ export default function OperatorLayout() {
     }
   }, [currentTab])
 
+  const handleGroupChange = (group: GroupType) => {
+    if (group !== currentGroup) {
+      track('operator_group_switched', { group })
+      setSearchParams({ group, tab: DEFAULT_TABS[group] })
+    }
+  }
+
   const handleTabChange = (tab: TabType) => {
-    setSearchParams({ tab })
+    setSearchParams({ group: currentGroup, tab })
   }
 
   const handleLogout = () => {
@@ -74,6 +125,37 @@ export default function OperatorLayout() {
 
   const modelName = import.meta.env.VITE_OPENROUTER_MODEL?.split('/')[1] || 'AI'
   const isDemoMode = import.meta.env.VITE_AI_DEMO_MODE === 'true'
+
+  const renderContent = () => {
+    if (currentGroup === 'operate') {
+      switch (currentTab) {
+        case 'dashboard':
+          return <DashboardView />
+        case 'initiatives':
+          return <InitiativesView />
+        case 'knowledge':
+          return <KnowledgeView />
+        case 'pitch':
+          return <PitchView />
+        default:
+          return <DashboardView />
+      }
+    } else if (currentGroup === 'finance') {
+      switch (currentTab) {
+        case 'roadmap':
+          return <RoadmapView />
+        case 'cashflow':
+          return <CashFlowView />
+        case 'statements':
+          return <StatementsView />
+        case 'lbo':
+          return <LBOView />
+        default:
+          return <RoadmapView />
+      }
+    }
+    return <DashboardView />
+  }
 
   return (
     <div
@@ -94,19 +176,62 @@ export default function OperatorLayout() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
-            {/* Left: Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-white" />
+            {/* Left: Logo + Group Switcher */}
+            <div className="flex items-center gap-4">
+              {/* Logo */}
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-white" />
+                </div>
+                <span className="font-semibold text-slate-800 tracking-tight">
+                  SparkLocal <span className="text-slate-400 font-normal">Operator</span>
+                </span>
               </div>
-              <span className="font-semibold text-slate-800 tracking-tight">
-                SparkLocal <span className="text-slate-400 font-normal">Operator</span>
-              </span>
+
+              {/* Group Switcher */}
+              <motion.div
+                layout
+                className="hidden sm:flex items-center rounded-lg p-0.5"
+                style={{
+                  border: '1px solid rgba(100, 116, 139, 0.2)',
+                }}
+              >
+                <button
+                  onClick={() => handleGroupChange('operate')}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                    currentGroup === 'operate'
+                      ? 'text-white'
+                      : 'text-slate-500 hover:text-slate-700'
+                  )}
+                  style={{
+                    backgroundColor: currentGroup === 'operate' ? '#1a1640' : 'transparent',
+                  }}
+                >
+                  <Activity className="w-3 h-3" />
+                  Operate
+                </button>
+                <button
+                  onClick={() => handleGroupChange('finance')}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                    currentGroup === 'finance'
+                      ? 'text-white'
+                      : 'text-slate-500 hover:text-slate-700'
+                  )}
+                  style={{
+                    backgroundColor: currentGroup === 'finance' ? '#1a1640' : 'transparent',
+                  }}
+                >
+                  <Calculator className="w-3 h-3" />
+                  Finance
+                </button>
+              </motion.div>
             </div>
 
-            {/* Center: Tabs */}
-            <nav className="hidden sm:flex items-center gap-1">
-              {TABS.map((tab) => (
+            {/* Center: Module Tabs */}
+            <motion.nav layout className="hidden sm:flex items-center gap-1">
+              {currentTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
@@ -121,7 +246,7 @@ export default function OperatorLayout() {
                   {tab.label}
                 </button>
               ))}
-            </nav>
+            </motion.nav>
 
             {/* Right: Status + Logout */}
             <div className="flex items-center gap-4">
@@ -145,22 +270,51 @@ export default function OperatorLayout() {
           </div>
         </div>
 
-        {/* Mobile tabs */}
+        {/* Mobile navigation */}
         <div className="sm:hidden border-t border-slate-100">
-          <div className="flex">
-            {TABS.map((tab) => (
+          {/* Mobile Group Switcher */}
+          <div className="flex border-b border-slate-100">
+            <button
+              onClick={() => handleGroupChange('operate')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium transition-colors',
+                currentGroup === 'operate'
+                  ? 'text-violet-600 bg-violet-50 border-b-2 border-violet-600'
+                  : 'text-slate-500'
+              )}
+            >
+              <Activity className="w-3 h-3" />
+              Operate
+            </button>
+            <button
+              onClick={() => handleGroupChange('finance')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium transition-colors',
+                currentGroup === 'finance'
+                  ? 'text-violet-600 bg-violet-50 border-b-2 border-violet-600'
+                  : 'text-slate-500'
+              )}
+            >
+              <Calculator className="w-3 h-3" />
+              Finance
+            </button>
+          </div>
+
+          {/* Mobile Tabs */}
+          <div className="flex overflow-x-auto">
+            {currentTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors',
+                  'flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors whitespace-nowrap px-2',
                   currentTab === tab.id
                     ? 'text-violet-600 border-b-2 border-violet-600'
                     : 'text-slate-500'
                 )}
               >
                 {tab.icon}
-                <span className="hidden xs:inline">{tab.label}</span>
+                <span>{tab.label}</span>
               </button>
             ))}
           </div>
@@ -169,9 +323,7 @@ export default function OperatorLayout() {
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {currentTab === 'dashboard' && <DashboardView />}
-        {currentTab === 'knowledge' && <KnowledgeView />}
-        {currentTab === 'pitch' && <PitchView />}
+        {renderContent()}
       </main>
     </div>
   )
