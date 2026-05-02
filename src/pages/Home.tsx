@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useCallback } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Users,
@@ -16,6 +17,12 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Logo } from '@/components/brand'
 import { businessOwners } from '@/data'
+import { track } from '@/lib/track'
+
+// Secret keystroke configuration
+const SECRET_WORD = 'KADEYN'
+const BUFFER_MAX_LENGTH = 12
+const BUFFER_TIMEOUT_MS = 3000
 
 // Unsplash images for each business type
 const businessImages: Record<string, string> = {
@@ -36,6 +43,62 @@ const interestedKids = [
 ]
 
 export default function Home() {
+  const navigate = useNavigate()
+  const keystrokeBufferRef = useRef('')
+  const bufferTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Secret keystroke handler - type "KADEYN" to access operator portal
+  const handleSecretKeystroke = useCallback(
+    (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input field
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement).isContentEditable
+      ) {
+        return
+      }
+
+      // Only handle letter keys
+      if (e.key.length !== 1 || !e.key.match(/[a-zA-Z]/)) {
+        return
+      }
+
+      // Clear existing timeout
+      if (bufferTimeoutRef.current) {
+        clearTimeout(bufferTimeoutRef.current)
+      }
+
+      // Add to buffer, keeping max length
+      const newBuffer = (keystrokeBufferRef.current + e.key.toUpperCase()).slice(-BUFFER_MAX_LENGTH)
+      keystrokeBufferRef.current = newBuffer
+
+      // Check if buffer ends with secret word
+      if (newBuffer.endsWith(SECRET_WORD)) {
+        track('operator_secret_triggered')
+        keystrokeBufferRef.current = ''
+        navigate('/operator/login')
+        return
+      }
+
+      // Set timeout to clear buffer after inactivity
+      bufferTimeoutRef.current = setTimeout(() => {
+        keystrokeBufferRef.current = ''
+      }, BUFFER_TIMEOUT_MS)
+    },
+    [navigate]
+  )
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleSecretKeystroke)
+    return () => {
+      window.removeEventListener('keydown', handleSecretKeystroke)
+      if (bufferTimeoutRef.current) {
+        clearTimeout(bufferTimeoutRef.current)
+      }
+    }
+  }, [handleSecretKeystroke])
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
