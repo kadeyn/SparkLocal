@@ -12,7 +12,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { callAI } from '@/lib/ai'
+import { callAI, type AIError } from '@/lib/ai'
 import { track } from '@/lib/track'
 import type { Initiative } from '@/data/operatorInitiatives'
 import { STAGE_COLORS, HEALTH_COLORS } from '@/data/operatorInitiatives'
@@ -46,13 +46,15 @@ const VERDICT_LABELS = {
 export default function InitiativeDeepDive({ initiative, onClose }: InitiativeDeepDiveProps) {
   const [verdict, setVerdict] = useState<AIVerdict | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<AIError | null>(null)
 
   const isDemoMode = import.meta.env.VITE_AI_DEMO_MODE === 'true'
 
-  const generateVerdict = async () => {
+  const generateVerdict = async (bypassCache = false) => {
     if (isDemoMode) return
 
     setLoading(true)
+    setError(null)
     track('operator_initiative_verdict_generated', { initiativeId: initiative.id })
 
     try {
@@ -85,11 +87,15 @@ Target Date: ${initiative.targetDate}
 Start Date: ${initiative.startDate}`,
         json: true,
         maxTokens: 1500,
+        bypassCache,
       })
 
       setVerdict(result as AIVerdict)
-    } catch (error) {
-      console.error('Verdict generation error:', error)
+    } catch (err) {
+      console.error('Verdict generation error:', err)
+      const aiError = err as AIError
+      setError(aiError)
+      track('operator_ai_error', { module: 'initiative', isRateLimit: aiError.isRateLimit ?? false })
     } finally {
       setLoading(false)
     }
@@ -228,7 +234,7 @@ Start Date: ${initiative.startDate}`,
               </h3>
               {!isDemoMode && (
                 <button
-                  onClick={generateVerdict}
+                  onClick={() => generateVerdict(true)}
                   disabled={loading}
                   className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700"
                 >
@@ -240,6 +246,32 @@ Start Date: ${initiative.startDate}`,
 
             {isDemoMode ? (
               <DemoModePlaceholder />
+            ) : error ? (
+              <div
+                className="rounded-xl p-3 flex items-start gap-2"
+                style={{
+                  background: 'rgba(249,115,98,0.08)',
+                  border: '1px solid rgba(249,115,98,0.3)',
+                }}
+              >
+                <AlertTriangle size={14} className="text-red-500 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <div className="text-xs font-semibold text-red-700 mb-1">
+                    {error.message || 'AI request failed'}
+                  </div>
+                  <div className="text-[11px] text-slate-600 mb-2">
+                    {error.isRateLimit
+                      ? 'Free model rate-limited. Retry in 30s, or set VITE_OPENROUTER_MODEL to a paid model in .env'
+                      : 'Check your API key and network connection.'}
+                  </div>
+                  <button
+                    onClick={() => generateVerdict(false)}
+                    className="text-xs font-bold text-red-700 hover:text-red-900 flex items-center gap-1"
+                  >
+                    <RefreshCw size={11} /> Retry
+                  </button>
+                </div>
+              </div>
             ) : loading ? (
               <div className="animate-pulse space-y-3 bg-slate-50 rounded-xl p-4">
                 <div className="h-6 bg-slate-200 rounded w-32" />

@@ -13,9 +13,10 @@ import {
   Percent,
   UserCheck,
   Building2,
+  AlertTriangle,
 } from 'lucide-react'
 import { track } from '@/lib/track'
-import { callAI } from '@/lib/ai'
+import { callAI, type AIError } from '@/lib/ai'
 import {
   kpiData,
   gmvData,
@@ -45,8 +46,10 @@ interface BriefingData {
 export default function DashboardView() {
   const [briefing, setBriefing] = useState<BriefingData | null>(null)
   const [briefingLoading, setBriefingLoading] = useState(true)
+  const [briefingError, setBriefingError] = useState<AIError | null>(null)
   const [insights, setInsights] = useState<Record<string, string>>({})
   const [insightLoading, setInsightLoading] = useState<string | null>(null)
+  const [insightError, setInsightError] = useState<AIError | null>(null)
 
   // Load initial briefing
   useEffect(() => {
@@ -55,6 +58,7 @@ export default function DashboardView() {
 
   const loadBriefing = async () => {
     setBriefingLoading(true)
+    setBriefingError(null)
     track('operator_briefing_requested')
 
     try {
@@ -83,7 +87,9 @@ Respond in JSON format:
       setBriefing(result as BriefingData)
     } catch (error) {
       console.error('Briefing error:', error)
-      setBriefing(DEMO_BRIEFING_RESPONSE)
+      const aiError = error as AIError
+      setBriefingError(aiError)
+      track('operator_ai_error', { module: 'briefing', isRateLimit: aiError.isRateLimit ?? false })
     } finally {
       setBriefingLoading(false)
     }
@@ -93,6 +99,7 @@ Respond in JSON format:
     if (insights[kpiId] || insightLoading) return
 
     setInsightLoading(kpiId)
+    setInsightError(null)
     track('operator_insight_requested', { kpi: kpiId })
 
     try {
@@ -105,10 +112,9 @@ Respond in JSON format:
       setInsights((prev) => ({ ...prev, [kpiId]: result as string }))
     } catch (error) {
       console.error('Insight error:', error)
-      setInsights((prev) => ({
-        ...prev,
-        [kpiId]: DEMO_INSIGHT_RESPONSES[kpiId] || 'Unable to load insight.',
-      }))
+      const aiError = error as AIError
+      setInsightError(aiError)
+      track('operator_ai_error', { module: 'insight', isRateLimit: aiError.isRateLimit ?? false })
     } finally {
       setInsightLoading(null)
     }
@@ -161,31 +167,69 @@ Respond in JSON format:
         ))}
       </div>
 
-      {/* Insight Panel (shows when a KPI is clicked) */}
-      {Object.keys(insights).length > 0 && (
+      {/* Insight Panel (shows when a KPI is clicked or on error) */}
+      {(Object.keys(insights).length > 0 || insightError || insightLoading) && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
-          className="bg-violet-50 border border-violet-200 rounded-xl p-4"
+          className={cn(
+            'rounded-xl p-4',
+            insightError
+              ? 'bg-red-50 border border-red-200'
+              : 'bg-violet-50 border border-violet-200'
+          )}
         >
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4 text-violet-600" />
+          {insightError ? (
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={14} className="text-red-500 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <div className="text-xs font-semibold text-red-700 mb-1">
+                  {insightError.message || 'AI request failed'}
+                </div>
+                <div className="text-[11px] text-slate-600 mb-2">
+                  {insightError.isRateLimit
+                    ? 'Free model rate-limited. Retry in 30s, or set VITE_OPENROUTER_MODEL to a paid model in .env'
+                    : 'Check your API key and network connection.'}
+                </div>
+                <button
+                  onClick={() => {
+                    setInsightError(null)
+                    const lastKpi = Object.keys(insights)[Object.keys(insights).length - 1]
+                    if (lastKpi) {
+                      setInsights((prev) => {
+                        const newInsights = { ...prev }
+                        delete newInsights[lastKpi]
+                        return newInsights
+                      })
+                      loadInsight(lastKpi)
+                    }
+                  }}
+                  className="text-xs font-bold text-red-700 hover:text-red-900 flex items-center gap-1"
+                >
+                  <RefreshCw size={11} /> Retry
+                </button>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-violet-900 mb-1">AI Insight</p>
-              <p className="text-sm text-violet-800">
-                {insightLoading ? (
-                  <span className="flex items-center gap-2">
-                    <RefreshCw className="w-3 h-3 animate-spin" />
-                    Loading insight...
-                  </span>
-                ) : (
-                  insights[Object.keys(insights)[Object.keys(insights).length - 1]]
-                )}
-              </p>
+          ) : (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-violet-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-violet-900 mb-1">AI Insight</p>
+                <p className="text-sm text-violet-800">
+                  {insightLoading ? (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      Loading insight...
+                    </span>
+                  ) : (
+                    insights[Object.keys(insights)[Object.keys(insights).length - 1]]
+                  )}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </motion.div>
       )}
 
@@ -224,7 +268,33 @@ Respond in JSON format:
             </button>
           </div>
 
-          {briefingLoading ? (
+          {briefingError ? (
+            <div
+              className="rounded-xl p-3 flex items-start gap-2"
+              style={{
+                background: 'rgba(249,115,98,0.08)',
+                border: '1px solid rgba(249,115,98,0.3)',
+              }}
+            >
+              <AlertTriangle size={14} className="text-red-400 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <div className="text-xs font-semibold text-red-300 mb-1">
+                  {briefingError.message || 'AI request failed'}
+                </div>
+                <div className="text-[11px] text-slate-300 mb-2">
+                  {briefingError.isRateLimit
+                    ? 'Free model rate-limited. Retry in 30s, or set VITE_OPENROUTER_MODEL to a paid model in .env'
+                    : 'Check your API key and network connection.'}
+                </div>
+                <button
+                  onClick={loadBriefing}
+                  className="text-xs font-bold text-red-300 hover:text-red-200 flex items-center gap-1"
+                >
+                  <RefreshCw size={11} /> Retry
+                </button>
+              </div>
+            </div>
+          ) : briefingLoading ? (
             <div className="animate-pulse space-y-3">
               <div className="h-6 bg-white/20 rounded w-3/4" />
               <div className="h-4 bg-white/10 rounded w-full" />

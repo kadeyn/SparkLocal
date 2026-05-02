@@ -86,3 +86,7 @@ export const trackOperatorLBODebtChanged = (debtPct: number) => {
 export const trackOperatorAISynthesisRegenerated = (module: string) => {
   track('operator_ai_synthesis_regenerated', { module })
 }
+
+export const trackOperatorAIError = (module: string, isRateLimit: boolean) => {
+  track('operator_ai_error', { module, isRateLimit })
+}

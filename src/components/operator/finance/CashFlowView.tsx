@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { LineChart, TrendingUp, TrendingDown, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { callAI } from '@/lib/ai'
+import { callAI, type AIError } from '@/lib/ai'
 import { track } from '@/lib/track'
 import {
   cashFlowScenarios,
@@ -26,15 +26,18 @@ export default function CashFlowView() {
   const [selectedScenario, setSelectedScenario] = useState<Scenario>('base')
   const [aiLevers, setAiLevers] = useState<AILevers | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<AIError | null>(null)
+  const [hasGenerated, setHasGenerated] = useState(false)
 
   const isDemoMode = import.meta.env.VITE_AI_DEMO_MODE === 'true'
   const currentScenario = cashFlowScenarios.find((s) => s.id === selectedScenario)!
   const runningBalances = calculateRunningBalance(currentScenario.weeks, STARTING_CASH)
 
-  const generateLevers = async () => {
+  const generateLevers = async (bypassCache = false) => {
     if (isDemoMode) return
 
     setLoading(true)
+    setError(null)
     track('operator_ai_synthesis_regenerated', { module: 'cashflow' })
 
     try {
@@ -68,26 +71,27 @@ ${currentScenario.weeks.map((w, i) => {
 Provide cash optimization levers.`,
         json: true,
         maxTokens: 1500,
+        bypassCache,
       })
 
       setAiLevers(result as AILevers)
-    } catch (error) {
-      console.error('Cash flow AI error:', error)
+      setHasGenerated(true)
+    } catch (err) {
+      console.error('Cash flow AI error:', err)
+      const aiError = err as AIError
+      setError(aiError)
+      track('operator_ai_error', { module: 'cashflow', isRateLimit: aiError.isRateLimit ?? false })
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    if (!isDemoMode) {
-      generateLevers()
-    }
-  }, [selectedScenario])
-
   const handleScenarioChange = (scenario: Scenario) => {
     track('operator_cashflow_scenario_switched', { scenario })
     setSelectedScenario(scenario)
     setAiLevers(null)
+    setError(null)
+    setHasGenerated(false)
   }
 
   // Calculate min/max for chart scaling
@@ -266,7 +270,10 @@ Provide cash optimization levers.`,
               title="AI Cash Levers"
               subtitle={currentScenario.label}
               loading={loading}
-              onRefresh={generateLevers}
+              error={error}
+              onRefresh={() => generateLevers(true)}
+              onGenerate={() => generateLevers(false)}
+              showGenerateButton={!hasGenerated && !aiLevers}
             >
               {aiLevers && (
                 <div className="space-y-4">

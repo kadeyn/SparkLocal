@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Calculator, Sparkles, AlertTriangle, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { callAI } from '@/lib/ai'
+import { callAI, type AIError } from '@/lib/ai'
 import { track } from '@/lib/track'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import {
@@ -32,6 +32,8 @@ export default function LBOView() {
   const [debtPct, setDebtPct] = useState(40)
   const [advisory, setAdvisory] = useState<LBOAdvisory | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<AIError | null>(null)
+  const [hasGenerated, setHasGenerated] = useState(false)
 
   const isDemoMode = import.meta.env.VITE_AI_DEMO_MODE === 'true'
   const selectedTarget = acquisitionTargets.find((t) => t.id === selectedTargetId)!
@@ -47,10 +49,11 @@ export default function LBOView() {
     exitMultiple: 8,
   })
 
-  const generateAdvisory = async () => {
+  const generateAdvisory = async (bypassCache = false) => {
     if (isDemoMode) return
 
     setLoading(true)
+    setError(null)
     track('operator_ai_synthesis_regenerated', { module: 'lbo' })
 
     try {
@@ -104,40 +107,41 @@ Risks: ${selectedTarget.risks.join(', ')}
 Provide M&A advisory.`,
         json: true,
         maxTokens: 2000,
+        bypassCache,
       })
 
       setAdvisory(result as LBOAdvisory)
-    } catch (error) {
-      console.error('LBO AI error:', error)
+      setHasGenerated(true)
+    } catch (err) {
+      console.error('LBO AI error:', err)
+      const aiError = err as AIError
+      setError(aiError)
+      track('operator_ai_error', { module: 'lbo', isRateLimit: aiError.isRateLimit ?? false })
     } finally {
       setLoading(false)
     }
   }
 
-  // Regenerate when target or debounced debt changes
-  useEffect(() => {
-    if (!isDemoMode) {
-      generateAdvisory()
-    }
-  }, [selectedTargetId, debouncedDebtPct])
-
-  const handleTargetChange = (targetId: string) => {
-    track('operator_lbo_target_selected', { targetId })
-    setSelectedTargetId(targetId)
-    setAdvisory(null)
-  }
-
-  const handleDebtChange = (newDebtPct: number) => {
-    setDebtPct(newDebtPct)
-    // Track only on debounced value via useEffect
-  }
-
-  // Track debounced debt changes
+  // Track debounced debt changes (for analytics only)
   useEffect(() => {
     if (debouncedDebtPct !== 40) { // Skip initial value
       track('operator_lbo_debt_changed', { debtPct: debouncedDebtPct })
     }
   }, [debouncedDebtPct])
+
+  const handleTargetChange = (targetId: string) => {
+    track('operator_lbo_target_selected', { targetId })
+    setSelectedTargetId(targetId)
+    setAdvisory(null)
+    setError(null)
+    setHasGenerated(false)
+  }
+
+  const handleDebtChange = (newDebtPct: number) => {
+    setDebtPct(newDebtPct)
+    // Note: Analytics tracked via useEffect on debouncedDebtPct
+    // Note: We don't auto-clear advisory on debt change since it requires explicit regeneration
+  }
 
   return (
     <div className="space-y-6">
@@ -336,7 +340,10 @@ Provide M&A advisory.`,
               title="Deal Advisory AI"
               subtitle={selectedTarget.name}
               loading={loading}
-              onRefresh={generateAdvisory}
+              error={error}
+              onRefresh={() => generateAdvisory(true)}
+              onGenerate={() => generateAdvisory(false)}
+              showGenerateButton={!hasGenerated && !advisory}
             >
               {advisory && (
                 <div className="space-y-4">

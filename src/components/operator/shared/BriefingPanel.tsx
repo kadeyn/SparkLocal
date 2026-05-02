@@ -1,13 +1,17 @@
 import { ReactNode } from 'react'
-import { Sparkles, RefreshCw } from 'lucide-react'
+import { Sparkles, RefreshCw, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { AIError } from '@/lib/ai'
 
 interface BriefingPanelProps {
   title: string
   subtitle?: string
   children: ReactNode
   loading?: boolean
+  error?: AIError | null
   onRefresh?: () => void
+  onGenerate?: () => void
+  showGenerateButton?: boolean
   className?: string
 }
 
@@ -16,9 +20,14 @@ export default function BriefingPanel({
   subtitle,
   children,
   loading = false,
+  error = null,
   onRefresh,
+  onGenerate,
+  showGenerateButton = false,
   className,
 }: BriefingPanelProps) {
+  const isRateLimit = error?.isRateLimit
+
   return (
     <div
       className={cn('rounded-2xl p-6 relative overflow-hidden', className)}
@@ -49,7 +58,7 @@ export default function BriefingPanel({
               )}
             </div>
           </div>
-          {onRefresh && (
+          {onRefresh && !showGenerateButton && (
             <button
               onClick={onRefresh}
               disabled={loading}
@@ -61,11 +70,48 @@ export default function BriefingPanel({
           )}
         </div>
 
-        {loading ? (
+        {error ? (
+          <div
+            className="rounded-xl p-3 flex items-start gap-2"
+            style={{
+              background: 'rgba(249,115,98,0.08)',
+              border: '1px solid rgba(249,115,98,0.3)',
+            }}
+          >
+            <AlertTriangle size={14} className="text-red-400 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <div className="text-xs font-semibold text-red-300 mb-1">
+                {error.message || 'AI request failed'}
+              </div>
+              <div className="text-[11px] text-slate-300 mb-2">
+                {isRateLimit
+                  ? 'Free model rate-limited. Retry in 30s, or set VITE_OPENROUTER_MODEL to a paid model in .env'
+                  : 'Check your API key and network connection.'}
+              </div>
+              <button
+                onClick={onRefresh}
+                className="text-xs font-bold text-red-300 hover:text-red-200 flex items-center gap-1"
+              >
+                <RefreshCw size={11} /> Retry
+              </button>
+            </div>
+          </div>
+        ) : loading ? (
           <div className="animate-pulse space-y-3">
             <div className="h-5 bg-white/20 rounded w-3/4" />
             <div className="h-4 bg-white/10 rounded w-full" />
             <div className="h-4 bg-white/10 rounded w-5/6" />
+          </div>
+        ) : showGenerateButton && onGenerate ? (
+          <div className="text-center py-4">
+            <p className="text-violet-200 text-sm mb-3">Click to generate AI synthesis</p>
+            <button
+              onClick={onGenerate}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500/30 hover:bg-violet-500/50 text-white text-sm font-medium transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              Generate AI Synthesis
+            </button>
           </div>
         ) : (
           children

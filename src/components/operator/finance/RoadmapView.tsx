@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Map, Sparkles, CheckCircle2, Clock, Circle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { callAI } from '@/lib/ai'
+import { callAI, type AIError } from '@/lib/ai'
 import { track } from '@/lib/track'
 import {
   roadmapVectors,
@@ -23,14 +23,17 @@ export default function RoadmapView() {
   const [selectedVector, setSelectedVector] = useState<VectorType>('organic')
   const [synthesis, setSynthesis] = useState<AISynthesis | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<AIError | null>(null)
+  const [hasGenerated, setHasGenerated] = useState(false)
 
   const isDemoMode = import.meta.env.VITE_AI_DEMO_MODE === 'true'
   const currentVector = roadmapVectors.find((v) => v.id === selectedVector)!
 
-  const generateSynthesis = async () => {
+  const generateSynthesis = async (bypassCache = false) => {
     if (isDemoMode) return
 
     setLoading(true)
+    setError(null)
     track('operator_ai_synthesis_regenerated', { module: 'roadmap' })
 
     try {
@@ -61,26 +64,27 @@ ${currentVector.plays.map((p) => `
 Provide strategic synthesis and recommendations.`,
         json: true,
         maxTokens: 1500,
+        bypassCache,
       })
 
       setSynthesis(result as AISynthesis)
-    } catch (error) {
-      console.error('Synthesis error:', error)
+      setHasGenerated(true)
+    } catch (err) {
+      console.error('Synthesis error:', err)
+      const aiError = err as AIError
+      setError(aiError)
+      track('operator_ai_error', { module: 'roadmap', isRateLimit: aiError.isRateLimit ?? false })
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    if (!isDemoMode) {
-      generateSynthesis()
-    }
-  }, [selectedVector])
-
   const handleVectorChange = (vectorId: VectorType) => {
     track('operator_roadmap_vector_switched', { vector: vectorId })
     setSelectedVector(vectorId)
     setSynthesis(null)
+    setError(null)
+    setHasGenerated(false)
   }
 
   const getStatusCounts = (vector: Vector) => {
@@ -194,7 +198,10 @@ Provide strategic synthesis and recommendations.`,
               title="AI Synthesis"
               subtitle={currentVector.label}
               loading={loading}
-              onRefresh={generateSynthesis}
+              error={error}
+              onRefresh={() => generateSynthesis(true)}
+              onGenerate={() => generateSynthesis(false)}
+              showGenerateButton={!hasGenerated && !synthesis}
             >
               {synthesis && (
                 <div className="space-y-4">

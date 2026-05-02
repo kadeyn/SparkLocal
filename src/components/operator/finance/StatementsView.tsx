@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { FileText, Sparkles, AlertCircle, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { callAI } from '@/lib/ai'
+import { callAI, type AIError } from '@/lib/ai'
 import { track } from '@/lib/track'
 import {
   plStatement,
@@ -28,13 +28,16 @@ export default function StatementsView() {
   const [selectedView, setSelectedView] = useState<StmtView>('pl')
   const [aiAnalysis, setAiAnalysis] = useState<CrossStatementAI | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<AIError | null>(null)
+  const [hasGenerated, setHasGenerated] = useState(false)
 
   const isDemoMode = import.meta.env.VITE_AI_DEMO_MODE === 'true'
 
-  const generateAnalysis = async () => {
+  const generateAnalysis = async (bypassCache = false) => {
     if (isDemoMode) return
 
     setLoading(true)
+    setError(null)
     track('operator_ai_synthesis_regenerated', { module: 'statements' })
 
     try {
@@ -62,25 +65,25 @@ ${keyRatios.map(r => `${r.label}: ${r.value} (Target: ${r.target}, Status: ${r.s
 Provide cross-statement analysis.`,
         json: true,
         maxTokens: 1500,
+        bypassCache,
       })
 
       setAiAnalysis(result as CrossStatementAI)
-    } catch (error) {
-      console.error('Statements AI error:', error)
+      setHasGenerated(true)
+    } catch (err) {
+      console.error('Statements AI error:', err)
+      const aiError = err as AIError
+      setError(aiError)
+      track('operator_ai_error', { module: 'statements', isRateLimit: aiError.isRateLimit ?? false })
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    if (!isDemoMode) {
-      generateAnalysis()
-    }
-  }, [selectedView])
-
   const handleViewChange = (view: StmtView) => {
     track('operator_statements_view_switched', { stmt: view })
     setSelectedView(view)
+    // Note: We don't clear AI analysis on view change since it's cross-statement analysis
   }
 
   const formatCurrency = (value: number, showSign = false) => {
@@ -265,7 +268,10 @@ Provide cross-statement analysis.`,
             <BriefingPanel
               title="Cross-Statement AI"
               loading={loading}
-              onRefresh={generateAnalysis}
+              error={error}
+              onRefresh={() => generateAnalysis(true)}
+              onGenerate={() => generateAnalysis(false)}
+              showGenerateButton={!hasGenerated && !aiAnalysis}
             >
               {aiAnalysis && (
                 <div className="space-y-4">
