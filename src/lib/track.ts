@@ -1,6 +1,8 @@
 // Analytics tracking helper
 // Currently just console.log scaffolding - will be replaced with PostHog/Mixpanel later
 
+import type { SwipeDirection } from './feed/dailyFeed'
+
 type TrackEventProps = Record<string, string | number | boolean | undefined>
 
 export function track(eventName: string, props?: TrackEventProps): void {
@@ -89,4 +91,72 @@ export const trackOperatorAISynthesisRegenerated = (module: string) => {
 
 export const trackOperatorAIError = (module: string, isRateLimit: boolean) => {
   track('operator_ai_error', { module, isRateLimit })
+}
+
+// Owner OS event helpers
+export const trackOwnerLoginAttempted = (success: boolean) => {
+  track('owner_login_attempted', { success })
+}
+
+export const trackOwnerDashboardViewed = () => {
+  track('owner_dashboard_viewed')
+}
+
+export const trackOwnerPipelineKidOpened = (kidId: string, stage: string) => {
+  track('owner_pipeline_kid_opened', { kidId, stage })
+}
+
+export const trackOwnerInitiativeOpened = (initiativeId: string) => {
+  track('owner_initiative_opened', { initiativeId })
+}
+
+export const trackOwnerInitiativeVerdictReceived = (
+  initiativeId: string,
+  verdict: 'scale' | 'troubleshoot' | 'kill',
+) => {
+  track('owner_initiative_verdict_received', { initiativeId, verdict })
+}
+
+export const trackOwnerPlaybookQuery = (query: string, sourcesReturned: number) => {
+  track('owner_playbook_query', { query, sourcesReturned })
+}
+
+export const trackOwnerFinanceProjectionViewed = (scenario: string) => {
+  track('owner_finance_projection_viewed', { scenario })
+}
+
+// Daily feed (prompt 3) event helpers
+export function trackFeedCardSwiped(
+  direction: SwipeDirection,
+  cardCategory: string,
+  matchScore: number,
+): void {
+  track('feed_card_swiped', { direction, cardCategory, matchScore })
+}
+
+export function trackFeedDayExhausted(
+  cardsActedOn: number,
+  interested: number,
+  saved: number,
+  declined: number,
+): void {
+  track('feed_day_exhausted', { cardsActedOn, interested, saved, declined })
+}
+
+export function trackFeedSessionNudgeShown(elapsedMinutes: number): void {
+  track('feed_session_nudge_shown', { elapsedMinutes: Math.round(elapsedMinutes) })
+}
+
+// Path tab (prompt 3) event helpers — replaces the legacy trackPathViewed
+// for the new two-tab structure. Legacy helper stays for backward compat.
+export function trackPathTabViewed(tab: 'mypath' | 'explore'): void {
+  track('path_tab_viewed', { tab })
+}
+
+export function trackPathExploreCardAdded(cardType: string): void {
+  track('path_explore_card_added', { cardType })
+}
+
+export function trackMyPathNextStepClicked(stepType: string): void {
+  track('my_path_next_step_clicked', { stepType })
 }

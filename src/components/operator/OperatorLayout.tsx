@@ -13,6 +13,8 @@ import {
   LogOut,
   Zap,
   Radio,
+  ShieldCheck,
+  Award,
 } from 'lucide-react'
 import { track } from '@/lib/track'
 import { cn } from '@/lib/utils'
@@ -24,11 +26,18 @@ import PitchView from './PitchView'
 
 // New views
 import { InitiativesView } from './operate'
-import { RoadmapView, CashFlowView, StatementsView, LBOView } from './finance'
+import {
+  RoadmapView,
+  CashFlowView,
+  StatementsView,
+  LBOView,
+  ComplianceView,
+  BadgeIssuanceAudit,
+} from './finance'
 
 type GroupType = 'operate' | 'finance'
 type OperateTab = 'dashboard' | 'initiatives' | 'knowledge' | 'pitch'
-type FinanceTab = 'roadmap' | 'cashflow' | 'statements' | 'lbo'
+type FinanceTab = 'roadmap' | 'cashflow' | 'statements' | 'lbo' | 'compliance' | 'badges'
 type TabType = OperateTab | FinanceTab
 
 interface TabConfig {
@@ -49,6 +58,8 @@ const FINANCE_TABS: TabConfig[] = [
   { id: 'cashflow', label: 'Cash Flow', icon: <LineChart className="w-4 h-4" /> },
   { id: 'statements', label: 'Statements', icon: <FileText className="w-4 h-4" /> },
   { id: 'lbo', label: 'LBO/M&A', icon: <Calculator className="w-4 h-4" /> },
+  { id: 'compliance', label: 'Compliance', icon: <ShieldCheck className="w-4 h-4" /> },
+  { id: 'badges', label: 'Badges', icon: <Award className="w-4 h-4" /> },
 ]
 
 const DEFAULT_TABS: Record<GroupType, TabType> = {
@@ -150,6 +161,10 @@ export default function OperatorLayout() {
           return <StatementsView />
         case 'lbo':
           return <LBOView />
+        case 'compliance':
+          return <ComplianceView />
+        case 'badges':
+          return <BadgeIssuanceAudit />
         default:
           return <RoadmapView />
       }

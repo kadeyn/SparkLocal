@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, MapPin } from 'lucide-react'
 import { useSurveyStore } from '@/lib/surveyState'
+import { determineTrackFromBirth } from '@/lib/compliance'
+import AgeFloorGate from '@/components/onboarding/AgeFloorGate'
 import { cn } from '@/lib/utils'
 
 // Question definitions
@@ -81,10 +83,9 @@ const questions = [
   {
     id: 7,
     key: 'ageGate' as const,
-    type: 'single' as const,
-    question: 'Are you 13 or older?',
-    options: ['Yes', "No, I'm 11 or 12"],
-    valueMap: { Yes: 'over13', "No, I'm 11 or 12": 'under13' },
+    type: 'birth' as const,
+    question: 'When were you born?',
+    helpText: "We only need the month and year — not the day.",
   },
   {
     id: 8,
@@ -440,6 +441,66 @@ function ZipQuestion({
   )
 }
 
+// Birth month + year question — replaces the prior binary 13+ pill question.
+// We collect month + year only (no day) per COPPA data-minimization guidance.
+const BIRTH_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+function BirthDateQuestion({
+  question,
+  helpText,
+  month,
+  year,
+  onMonthChange,
+  onYearChange,
+}: {
+  question: string
+  helpText: string
+  month: number | undefined
+  year: number | undefined
+  onMonthChange: (m: number | undefined) => void
+  onYearChange: (y: number | undefined) => void
+}) {
+  return (
+    <div className="min-h-screen flex flex-col justify-center px-6 py-20">
+      <div className="max-w-md mx-auto w-full">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white mb-3 leading-tight">
+          {question}
+        </h2>
+        <p className="text-white/70 mb-8 text-base">{helpText}</p>
+        <div className="grid grid-cols-3 gap-3">
+          <select
+            value={month ?? ''}
+            onChange={(e) => onMonthChange(e.target.value ? Number(e.target.value) : undefined)}
+            className="col-span-2 px-5 py-4 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-lg focus:outline-none focus:ring-2 focus:ring-white/50 appearance-none"
+          >
+            <option value="" className="text-slate-900">Month</option>
+            {BIRTH_MONTHS.map((m, i) => (
+              <option key={m} value={i + 1} className="text-slate-900">
+                {m}
+              </option>
+            ))}
+          </select>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={year ?? ''}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/\D/g, '').slice(0, 4)
+              onYearChange(raw ? Number(raw) : undefined)
+            }}
+            placeholder="Year"
+            className="px-5 py-4 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-lg text-center placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/50"
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Loading screen (Phase 3)
 function LoadingScreen() {
   const [messageIndex, setMessageIndex] = useState(0)
@@ -519,12 +580,29 @@ function LoadingScreen() {
 export default function KidOnboarding() {
   const [step, setStep] = useState(0) // 0 = splash, 1-8 = questions, 9 = loading
   const [direction, setDirection] = useState(1) // 1 = forward, -1 = back
-  const { answers, setAnswer, markComplete } = useSurveyStore()
+  const [ageBlocked, setAgeBlocked] = useState(false)
+  const { answers, setAnswer, markComplete, recordAgeConfirmation } = useSurveyStore()
   const prefersReducedMotion = useReducedMotion()
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Handle next step
+  // Handle next step. If the user is on the birth-date question (7), run it
+  // through determineTrackFromBirth() before advancing. Below the age floor
+  // we short-circuit to the AgeFloorGate; above, we stamp the age-confirmed
+  // timestamp and record ageGate for backward compat.
   const goNext = useCallback(() => {
+    if (step === 7) {
+      const result = determineTrackFromBirth(answers.birthMonth, answers.birthYear)
+      if (result && !result.allowed) {
+        setAnswer('ageGate', 'under13')
+        setAgeBlocked(true)
+        return
+      }
+      if (result && result.allowed) {
+        setAnswer('ageGate', 'over13')
+        recordAgeConfirmation()
+      }
+    }
+
     if (step < 9) {
       setDirection(1)
       setStep((prev) => prev + 1)
@@ -532,7 +610,7 @@ export default function KidOnboarding() {
     if (step === 8) {
       markComplete()
     }
-  }, [step, markComplete])
+  }, [step, markComplete, answers.birthMonth, answers.birthYear, setAnswer, recordAgeConfirmation])
 
   // Handle back
   const goBack = useCallback(() => {
@@ -626,6 +704,17 @@ export default function KidOnboarding() {
             onChange={(value) => setAnswer(q.key, value as never)}
           />
         )
+      case 'birth':
+        return (
+          <BirthDateQuestion
+            question={q.question}
+            helpText={(q as { helpText: string }).helpText}
+            month={answers.birthMonth}
+            year={answers.birthYear}
+            onMonthChange={(m) => setAnswer('birthMonth', m as never)}
+            onYearChange={(y) => setAnswer('birthYear', y as never)}
+          />
+        )
       default:
         return null
     }
@@ -644,9 +733,27 @@ export default function KidOnboarding() {
         return true // Can always skip
       case 'zip':
         return (answers[q.key] as string).length === 5
+      case 'birth':
+        return (
+          typeof answers.birthMonth === 'number' &&
+          typeof answers.birthYear === 'number' &&
+          answers.birthYear >= 1900 &&
+          answers.birthYear <= new Date().getFullYear()
+        )
       default:
         return false
     }
+  }
+
+  // If age gate blocked the user at question 7, show the warm rejection +
+  // waitlist instead of the rest of the survey.
+  if (ageBlocked) {
+    return (
+      <AgeFloorGate
+        birthMonth={answers.birthMonth}
+        birthYear={answers.birthYear}
+      />
+    )
   }
 
   return (

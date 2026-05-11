@@ -13,10 +13,21 @@ import {
   Saved,
   Messages,
   Path,
+  OwnerHome,
+  MyBadges,
 } from './pages'
 import OperatorLogin from './components/operator/OperatorLogin'
 import OperatorLayout from './components/operator/OperatorLayout'
 import RequireOperator from './components/operator/RequireOperator'
+import OwnerLogin from './components/owner/OwnerLogin'
+import OwnerLayout from './components/owner/OwnerLayout'
+import RequireOwner from './components/owner/RequireOwner'
+import OwnerDashboardView from './components/owner/DashboardView'
+import OwnerPipelineView from './components/owner/PipelineView'
+import OwnerInitiativesView from './components/owner/InitiativesView'
+import OwnerFinanceView from './components/owner/FinanceView'
+import OwnerPlaybookView from './components/owner/PlaybookView'
+import OwnerBadgesView from './components/owner/BadgesView'
 import { track } from './lib/track'
 
 // Global dev shortcut hook
@@ -54,6 +65,7 @@ export default function App() {
       <Route path="/app/saved" element={<Saved />} />
       <Route path="/app/messages" element={<Messages />} />
       <Route path="/app/path" element={<Path />} />
+      <Route path="/app/badges" element={<MyBadges />} />
       <Route path="/business/:id" element={<BusinessDetail />} />
       <Route path="/parent/dashboard" element={<ParentDashboard />} />
       <Route path="/signup/business" element={<BusinessSignup />} />
@@ -69,6 +81,20 @@ export default function App() {
           </RequireOperator>
         }
       />
+
+      {/* Owner OS Routes */}
+      <Route path="/owner" element={<OwnerHome />} />
+      <Route path="/owner/login" element={<OwnerLogin />} />
+      <Route element={<RequireOwner />}>
+        <Route element={<OwnerLayout />}>
+          <Route path="/owner/dashboard" element={<OwnerDashboardView />} />
+          <Route path="/owner/pipeline" element={<OwnerPipelineView />} />
+          <Route path="/owner/initiatives" element={<OwnerInitiativesView />} />
+          <Route path="/owner/finance" element={<OwnerFinanceView />} />
+          <Route path="/owner/playbook" element={<OwnerPlaybookView />} />
+          <Route path="/owner/badges" element={<OwnerBadgesView />} />
+        </Route>
+      </Route>
     </Routes>
   )
 }

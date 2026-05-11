@@ -1,269 +1,239 @@
-import { useEffect } from 'react'
-import { useSearchParams, Link, useLocation } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Trophy, Check, Zap, TreeDeciduous, Sparkles, Rocket, Home, Bookmark, MessageSquare } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { SkillTree, Constellation, Future } from '@/components/path'
-import { kadeynProfile } from '@/data/kidProfile'
-import { getProgressStats } from '@/data/skillTreeData'
-import { trackPathViewed } from '@/lib/track'
+// Path — kid's weekly/post-gig surface.
+//
+// Restructured per research brief §6:
+//   Old: Skill Tree | Constellation | Future  (three tabs)
+//   New: My Path | Explore                    (two tabs)
+//
+// My Path absorbs Skill Tree + Future. Explore is the renamed Constellation.
+// Legacy components remain on disk marked @deprecated for one release cycle.
+
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+  Bookmark,
+  Compass,
+  Home,
+  MessageSquare,
+  Sparkles,
+  TrendingUp,
+  X,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { kadeynProfile } from '@/data/kidProfile'
+import {
+  trackMyPathNextStepClicked,
+  trackPathExploreCardAdded,
+  trackPathTabViewed,
+} from '@/lib/track'
+import MyPath from '@/components/path/MyPath'
+import Explore from '@/components/path/Explore'
 
-type ViewType = 'tree' | 'constellation' | 'future'
+type PathTab = 'mypath' | 'explore'
 
-const VIEW_TABS: { id: ViewType; label: string; icon: React.ReactNode }[] = [
-  { id: 'tree', label: 'Skill Tree', icon: <TreeDeciduous className="w-4 h-4" /> },
-  { id: 'constellation', label: 'Constellation', icon: <Sparkles className="w-4 h-4" /> },
-  { id: 'future', label: 'Future', icon: <Rocket className="w-4 h-4" /> },
-]
-
-// Stat pill component
-function StatPill({
-  icon,
-  value,
-  label,
-  color,
-}: {
-  icon: React.ReactNode
-  value: string | number
-  label: string
-  color: string
-}) {
-  return (
-    <div
-      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs"
-      style={{ backgroundColor: `${color}15` }}
-    >
-      <span style={{ color }}>{icon}</span>
-      <span className="font-mono font-semibold" style={{ color }}>
-        {value}
-      </span>
-      <span className="text-muted-foreground hidden sm:inline">{label}</span>
-    </div>
-  )
+const TAB_LABELS: Record<PathTab, string> = {
+  mypath: 'My Path',
+  explore: 'Explore',
 }
 
-// Segmented control component
-function ViewToggle({
-  currentView,
-  onViewChange,
-}: {
-  currentView: ViewType
-  onViewChange: (view: ViewType) => void
-}) {
+const TOOLTIP_STORAGE_KEY = 'sparklocal-path-tooltip-seen'
+
+// Default-tab heuristic — research brief §6: kids who have done work want to
+// see their progress; kids who haven't want to look around.
+function inferDefaultTab(): PathTab {
+  return kadeynProfile.completedJobs.length > 0 ? 'mypath' : 'explore'
+}
+
+export default function Path() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const defaultTab = useMemo(() => inferDefaultTab(), [])
+  const currentTab = (searchParams.get('tab') as PathTab) || defaultTab
+  const [tooltipOpen, setTooltipOpen] = useState(false)
+
+  // Show the 20-second explainer tooltip on first visit only.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!localStorage.getItem(TOOLTIP_STORAGE_KEY)) {
+      setTooltipOpen(true)
+    }
+  }, [])
+
+  // Tab-view analytics — fires on initial render and every tab change.
+  useEffect(() => {
+    trackPathTabViewed(currentTab)
+  }, [currentTab])
+
+  const handleTabChange = (tab: PathTab) => {
+    setSearchParams({ tab })
+  }
+
+  const dismissTooltip = () => {
+    setTooltipOpen(false)
+    try {
+      localStorage.setItem(TOOLTIP_STORAGE_KEY, '1')
+    } catch {
+      /* private mode etc — fine to drop */
+    }
+  }
+
   return (
-    <div className="flex p-1 bg-slate-100 rounded-full">
-      {VIEW_TABS.map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => onViewChange(tab.id)}
-          className={cn(
-            'flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all',
-            currentView === tab.id
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          )}
+    <div className="min-h-screen bg-background">
+      <main className="max-w-2xl mx-auto px-4 py-6 pb-24">
+        {/* Header — kid identity */}
+        <header className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="w-12 h-12 border-2 border-indigo-200">
+              <AvatarImage src={kadeynProfile.avatar} />
+              <AvatarFallback className="bg-indigo-100 text-indigo-700 text-base font-bold">
+                {kadeynProfile.firstName[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-lg font-bold leading-tight">{kadeynProfile.firstName}</h1>
+              <p className="text-xs text-muted-foreground">
+                {kadeynProfile.age} · Mobile, AL
+              </p>
+            </div>
+          </div>
+        </header>
+
+        {/* Tab segmented control */}
+        <div
+          className="flex p-1 bg-slate-100 rounded-full mb-6 sticky top-3 z-30 backdrop-blur"
+          role="tablist"
+          aria-label="Path views"
         >
-          <span className="hidden sm:inline">{tab.icon}</span>
-          <span>{tab.label}</span>
-        </button>
-      ))}
+          {(Object.keys(TAB_LABELS) as PathTab[]).map((tab) => {
+            const active = currentTab === tab
+            const Icon = tab === 'mypath' ? TrendingUp : Compass
+            return (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={active}
+                onClick={() => handleTabChange(tab)}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all min-h-12',
+                  active
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900',
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {TAB_LABELS[tab]}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Active tab body */}
+        <AnimatePresence mode="wait">
+          {currentTab === 'mypath' ? (
+            <motion.div
+              key="mypath"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <MyPath
+                kidId={kadeynProfile.id}
+                onNextStepClicked={trackMyPathNextStepClicked}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="explore"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Explore onCardAdded={trackPathExploreCardAdded} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      <AnimatePresence>
+        {tooltipOpen && <FirstVisitTooltip onDismiss={dismissTooltip} />}
+      </AnimatePresence>
+
+      <BottomNav />
     </div>
   )
 }
 
-// Bottom navigation (mobile)
+function FirstVisitTooltip({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 16 }}
+      role="dialog"
+      aria-modal="false"
+      className="fixed bottom-24 left-4 right-4 z-40 mx-auto max-w-md rounded-2xl bg-slate-900 text-white p-4 shadow-2xl"
+    >
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="absolute top-2 right-2 p-1 rounded-full hover:bg-white/10"
+      >
+        <X className="w-4 h-4" />
+      </button>
+      <div className="text-sm font-semibold mb-2">Two surfaces here:</div>
+      <ul className="text-xs text-white/85 space-y-1.5">
+        <li>
+          <span className="font-semibold">My Path</span> — where you see your growth and pick your
+          next step.
+        </li>
+        <li>
+          <span className="font-semibold">Explore</span> — where you look around at what else is
+          out there.
+        </li>
+      </ul>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="mt-3 text-xs font-semibold text-white px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20"
+      >
+        Got it
+      </button>
+    </motion.div>
+  )
+}
+
 function BottomNav() {
   const location = useLocation()
-
-  const navItems = [
+  const items = [
     { path: '/app/feed', icon: Home, label: 'Feed' },
     { path: '/app/saved', icon: Bookmark, label: 'Saved' },
     { path: '/app/messages', icon: MessageSquare, label: 'Messages' },
     { path: '/app/path', icon: Sparkles, label: 'Path' },
   ]
-
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t md:hidden">
-      <div className="flex items-center justify-around h-16">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path
+    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-background border-t">
+      <div className="max-w-md mx-auto flex items-center justify-around py-2">
+        {items.map(({ path, icon: Icon, label }) => {
+          const active = location.pathname === path
           return (
             <Link
-              key={item.path}
-              to={item.path}
+              key={path}
+              to={path}
+              aria-label={label}
               className={cn(
-                'flex flex-col items-center justify-center w-16 h-full gap-0.5 transition-colors',
-                isActive ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+                'flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-colors min-w-12 min-h-12',
+                active ? 'text-primary' : 'text-muted-foreground',
               )}
             >
-              <item.icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <Icon className="w-6 h-6" />
+              <span className="text-[10px] font-medium">{label}</span>
             </Link>
           )
         })}
       </div>
     </nav>
-  )
-}
-
-// Desktop sidebar
-function Sidebar() {
-  const location = useLocation()
-
-  const navItems = [
-    { path: '/app/feed', icon: Home, label: 'Feed' },
-    { path: '/app/saved', icon: Bookmark, label: 'Saved' },
-    { path: '/app/messages', icon: MessageSquare, label: 'Messages' },
-    { path: '/app/path', icon: Sparkles, label: 'Path' },
-  ]
-
-  return (
-    <aside className="hidden md:flex flex-col w-64 h-screen fixed left-0 top-0 bg-white border-r p-4">
-      <div className="flex items-center gap-2 mb-8 px-2">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-rose-400 flex items-center justify-center">
-          <Zap className="w-4 h-4 text-white" />
-        </div>
-        <span className="font-bold text-lg">SparkLocal</span>
-      </div>
-
-      <nav className="flex-1 space-y-1">
-        {navItems.map((item) => {
-          const isActive = location.pathname.startsWith(item.path)
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors',
-                isActive
-                  ? 'bg-indigo-50 text-indigo-600'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              <span>{item.label}</span>
-            </Link>
-          )
-        })}
-      </nav>
-    </aside>
-  )
-}
-
-export default function Path() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const currentView = (searchParams.get('view') as ViewType) || 'tree'
-
-  const stats = getProgressStats()
-
-  const handleViewChange = (view: ViewType) => {
-    setSearchParams({ view })
-    trackPathViewed(view)
-  }
-
-  // Track initial view
-  useEffect(() => {
-    trackPathViewed(currentView)
-  }, [])
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="md:ml-64 pb-20 md:pb-6">
-        <div className="max-w-3xl mx-auto px-4 py-6">
-          {/* Header */}
-          <header className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              {/* Kid info */}
-              <div className="flex items-center gap-3">
-                <Avatar className="w-14 h-14 border-2 border-indigo-200">
-                  <AvatarImage src={kadeynProfile.avatar} />
-                  <AvatarFallback className="bg-indigo-100 text-indigo-700 text-lg font-bold">
-                    {kadeynProfile.firstName[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h1 className="text-xl font-bold">{kadeynProfile.firstName}</h1>
-                  <p className="text-sm text-muted-foreground">
-                    {kadeynProfile.age} · Mobile, AL
-                  </p>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="flex items-center gap-2">
-                <StatPill
-                  icon={<Trophy className="w-3.5 h-3.5" />}
-                  value={stats.xp}
-                  label="XP"
-                  color="#4F46E5"
-                />
-                <StatPill
-                  icon={<Check className="w-3.5 h-3.5" />}
-                  value={`${stats.earned}/${stats.total}`}
-                  label="earned"
-                  color="#22C55E"
-                />
-                <StatPill
-                  icon={<Zap className="w-3.5 h-3.5" />}
-                  value={stats.unlocked}
-                  label="ready"
-                  color="#FB7185"
-                />
-              </div>
-            </div>
-
-            {/* View toggle */}
-            <ViewToggle currentView={currentView} onViewChange={handleViewChange} />
-          </header>
-
-          {/* View content */}
-          <div className="min-h-[60vh]">
-            <AnimatePresence mode="wait">
-              {currentView === 'tree' && (
-                <motion.div
-                  key="tree"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.2 }}
-                  className="h-[65vh] md:h-[70vh]"
-                >
-                  <SkillTree />
-                </motion.div>
-              )}
-              {currentView === 'constellation' && (
-                <motion.div
-                  key="constellation"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.2 }}
-                  className="h-[65vh] md:h-[70vh]"
-                >
-                  <Constellation />
-                </motion.div>
-              )}
-              {currentView === 'future' && (
-                <motion.div
-                  key="future"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.2 }}
-                  className="h-[65vh] md:h-[70vh]"
-                >
-                  <Future />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </main>
-
-      <BottomNav />
-    </div>
   )
 }

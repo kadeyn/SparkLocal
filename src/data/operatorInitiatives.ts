@@ -1,6 +1,6 @@
 // Initiative Pipeline - Kanban with KPI tracking
 
-export type InitiativeStage = 'idea' | 'planning' | 'pilot' | 'scaling'
+export type InitiativeStage = 'idea' | 'planning' | 'pilot' | 'scaling' | 'completed'
 export type InitiativeHealth = 'on-track' | 'at-risk' | 'blocked'
 
 export interface InitiativeKPI {
@@ -30,6 +30,7 @@ export const STAGE_COLORS: Record<InitiativeStage, string> = {
   planning: '#7B61FF',
   pilot: '#FFA94D',
   scaling: '#22C8A9',
+  completed: '#10B981',
 }
 
 export const HEALTH_COLORS: Record<InitiativeHealth, string> = {
@@ -151,6 +152,118 @@ export const initiatives: Initiative[] = [
       'Identify champion contacts at target districts',
     ],
     vectorId: 'org-2',
+  },
+  {
+    id: 'init-6',
+    title: 'Privacy counsel engagement — COPPA amended rule readiness',
+    description:
+      'P0 · $25K budget. Engage outside privacy counsel to audit our COPPA amended rule readiness, draft the separate-consent flow language, and review the data retention policy before V1 launch. Critical-path compliance work — amended rule in force 2026-04-22.',
+    stage: 'planning',
+    health: 'on-track',
+    owner: 'Zac Smith',
+    startDate: '2026-05-01',
+    targetDate: '2026-07-15',
+    kpis: [
+      { label: 'Outside counsel scoped', target: '1 firm', current: '0', trend: 'flat' },
+      { label: 'Compliance memos delivered', target: '3', current: '0', trend: 'flat' },
+      { label: 'Privacy policy v2 shipped', target: 'Yes', current: 'No', trend: 'flat' },
+    ],
+    blockers: [],
+    nextSteps: [
+      'Interview 3 privacy firms with EdTech / under-18 experience',
+      'Sign engagement letter with chosen firm',
+      'Schedule retention-policy review session',
+    ],
+  },
+  {
+    id: 'init-7',
+    title: 'Money transmitter law review — parent-mediated payment architecture',
+    description:
+      'P0 · $10K budget. Legal review of state money transmitter laws to confirm the parent-mediated payment architecture (kid earnings flow to a parent-controlled account) avoids triggering MTL licensure in our launch states. Blocks the prompt-2 payment work.',
+    stage: 'planning',
+    health: 'on-track',
+    owner: 'Zac Smith',
+    startDate: '2026-05-01',
+    targetDate: '2026-08-01',
+    kpis: [
+      { label: 'Launch states reviewed', target: '5', current: '0', trend: 'flat' },
+      { label: 'MTL exposure memo', target: 'Yes', current: 'No', trend: 'flat' },
+      { label: 'Payment-flow architecture approved', target: 'Yes', current: 'No', trend: 'flat' },
+    ],
+    blockers: [
+      'Parent-mediated payments (prompt 2) cannot ship until this clears',
+    ],
+    nextSteps: [
+      'Brief external counsel on the parent-mediated flow design',
+      'Confirm Alabama, Mississippi, Florida, Georgia, Tennessee positions',
+      'Document any state-specific caveats for engineering',
+    ],
+  },
+  {
+    id: 'init-10',
+    title: 'Feed redesign + Path tab restructure — V1',
+    description:
+      'P0 · $0 internal · shipped 2026-05-11. Bounded daily feed (5-8 swipe cards, 200ms cooldown, exhausted state, session pacing hook). Path tab restructured: Skill Tree + Future collapsed into My Path; Constellation renamed to Explore. Anti-doomscroll mechanics per research brief §7.',
+    stage: 'completed',
+    health: 'on-track',
+    owner: 'Zac Smith',
+    startDate: '2026-05-04',
+    targetDate: '2026-05-11',
+    kpis: [
+      { label: 'Daily-bounded swipe UI', target: 'Yes', current: 'Yes', trend: 'flat' },
+      { label: 'Path tabs (was 3)', target: '2', current: '2', trend: 'flat' },
+      { label: 'Open Badges → My Path wired', target: 'Yes', current: 'Yes', trend: 'flat' },
+    ],
+    blockers: [],
+    nextSteps: [
+      'Wire AI-aware session pacing once prompt 5 ships the cost router',
+      'Replace mock card generator with real recommender after backend lands',
+      'Delete legacy SkillTree/Constellation/Future after one release cycle',
+    ],
+  },
+  {
+    id: 'init-9',
+    title: 'Open Badges 3.0 credential issuer — V1',
+    description:
+      'P0 · $0 internal · shipped 2026-05-11. W3C VC Data Model v2.0 + Open Badges 3.0 issuer with mentor-proposes / kid-accepts flow. Ed25519Signature2020 over an env-var key (KMS-ready abstraction). Hardening punch list lives in README §10.',
+    stage: 'completed',
+    health: 'on-track',
+    owner: 'Zac Smith',
+    startDate: '2026-05-01',
+    targetDate: '2026-05-15',
+    kpis: [
+      { label: 'Badge classes shipped', target: '5+', current: '7', trend: 'up' },
+      { label: 'Issuer DID generated', target: 'Yes', current: 'Yes', trend: 'flat' },
+      { label: 'Kid-accept flow shipped', target: 'Yes', current: 'Yes', trend: 'flat' },
+    ],
+    blockers: [],
+    nextSteps: [
+      'Hand-cache the Open Badges 3.0 context for production-grade verification',
+      'Move private signing key out of env var to KMS / Vault before V1 launch',
+      'Add StatusList2021 for revocation (hardening pass)',
+    ],
+  },
+  {
+    id: 'init-8',
+    title: 'Developmental psychology consultation for track design',
+    description:
+      'P1 · $5K budget. Bring in a developmental psychologist to review the Explorer/Builder/Pro track boundaries, money-handling progression, and parental-veto framework — independent expert review before user testing.',
+    stage: 'planning',
+    health: 'on-track',
+    owner: 'Zac Smith',
+    startDate: '2026-05-01',
+    targetDate: '2026-06-15',
+    kpis: [
+      { label: 'Consultant scoped', target: '1', current: '0', trend: 'flat' },
+      { label: 'Track-boundary review delivered', target: 'Yes', current: 'No', trend: 'flat' },
+      { label: 'Recommendations integrated', target: 'Yes', current: 'No', trend: 'flat' },
+    ],
+    blockers: [],
+    nextSteps: [
+      'Identify 2-3 candidates with adolescent-finance research background',
+      'Send the track-spec doc for pre-meeting review',
+      'Run a 60-min working session on age-13 cognitive readiness',
+    ],
   },
 ]
 

@@ -1,3 +1,6 @@
+// @deprecated — replaced by MyPath/Explore in prompt 3. Kept on disk for one
+// release cycle in case rollback is needed; no current import sites.
+
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'

@@ -12,6 +12,7 @@ const STAGES: { id: InitiativeStage; label: string }[] = [
   { id: 'planning', label: 'Planning' },
   { id: 'pilot', label: 'Pilot' },
   { id: 'scaling', label: 'Scaling' },
+  { id: 'completed', label: 'Completed' },
 ]
 
 export default function InitiativesView() {
@@ -47,7 +48,7 @@ export default function InitiativesView() {
       </div>
 
       {/* Kanban Board */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {STAGES.map((stage) => {
           const stageInitiatives = getInitiativesByStage(stage.id)
           const color = STAGE_COLORS[stage.id]

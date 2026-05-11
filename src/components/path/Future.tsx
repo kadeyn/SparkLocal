@@ -1,3 +1,7 @@
+// @deprecated — collapsed into MyPath in prompt 3 (planning function moved
+// into both MyPath and Explore). Kept on disk for one release cycle in case
+// rollback is needed; no current import sites.
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Video, Briefcase, Award, ChevronRight, MapPin, Star, Users } from 'lucide-react'

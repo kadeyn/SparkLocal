@@ -1,3 +1,6 @@
+// @deprecated — renamed/superseded by Explore in prompt 3. Kept on disk for
+// one release cycle in case rollback is needed; no current import sites.
+
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Users, Palette, Wrench, Star } from 'lucide-react'
